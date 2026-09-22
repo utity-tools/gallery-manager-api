@@ -92,6 +92,8 @@ model Gallery {
   artworks Artwork[]
   artists  Artist[]
   shows    Show[]
+  products Product[]  // eCommerce: Sellable products
+  orders   Order[]    // eCommerce: Customer orders
 
   @@unique([userId])
 }
@@ -221,4 +223,64 @@ model ShowArtwork {
   position  Int     @default(0)
 
   @@unique([showId, artworkId])
+}
+
+// eCommerce: Sellable products (prints, photos, illustrations, merchandise)
+model Product {
+  id          String   @id @default(cuid())
+  galleryId   String
+  gallery     Gallery  @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+  title       String   @db.VarChar(200)
+  description String?  @db.VarChar(1000)
+  imageUrl    String   // Primary product image
+  price       Decimal  @db.Decimal(10, 2) // EUR, max 99999.99
+  category    String   // "print" | "photo" | "illustration" | "merchandise"
+  stock       Int      @default(0) // Quantity available
+  sku         String   // Unique per gallery
+  variantes   Json?    // { "sizes": ["A3", "A2"], "materials": ["Mate", "Brillante"], ... }
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orders OrderItem[]
+
+  @@unique([galleryId, sku])
+  @@index([galleryId])
+}
+
+// eCommerce: Customer orders
+model Order {
+  id              String   @id @default(cuid())
+  galleryId       String
+  gallery         Gallery  @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+  customerName    String   @db.VarChar(100)
+  customerEmail   String
+  customerPhone   String?
+  totalPrice      Decimal  @db.Decimal(10, 2)
+  paymentStatus   String   @default("pending") // "pending" | "paid" | "failed"
+  orderStatus     String   @default("new") // "new" | "processing" | "shipped" | "delivered"
+  shippingAddress Json?    // { street, city, postalCode, country }
+  stripePaymentId String?  // Link to Stripe PaymentIntent
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  items OrderItem[]
+
+  @@index([galleryId])
+  @@index([paymentStatus])
+}
+
+// eCommerce: Order line items
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity  Int
+  priceAtTime Decimal @db.Decimal(10, 2) // Price when ordered (in case product price changes)
+  variantes Json?   // { "size": "A3", "material": "Mate" }
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
 }
