@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from "uuid";
 import { getSupabaseClient } from "../db/supabase";
 import { assertGalleryOwnership } from "../utils/ownership";
 import { createError, ERRORS } from "../errors/AppErrors";
@@ -41,6 +40,7 @@ export async function uploadImage(
 
   await assertGalleryOwnership(galleryId, userId);
 
+  const { v4: uuidv4 } = await import("uuid");
   const filename = `${uuidv4()}.${ext}`;
   const path = `${galleryId}/${filename}`;
 
