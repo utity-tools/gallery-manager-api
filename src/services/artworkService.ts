@@ -38,6 +38,19 @@ async function assertArtistBelongsToGallery(
   }
 }
 
+export async function getArtworkById(artworkId: string): Promise<ArtworkDTO> {
+  const artwork = await prisma.artwork.findUnique({
+    where: { id: artworkId },
+    include: { artist: ARTIST_SELECT },
+  });
+
+  if (!artwork) {
+    throw createError(ERRORS.ARTWORK_NOT_FOUND);
+  }
+
+  return new ArtworkDTO(artwork);
+}
+
 export async function getArtworksByGallery(
   galleryId: string,
   page = 1,

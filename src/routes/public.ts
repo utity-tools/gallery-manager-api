@@ -36,6 +36,21 @@ router.get("/galleries/:slug/artworks", async (req, res, next) => {
   }
 });
 
+router.get("/galleries/:slug/artworks/:artworkId", async (req, res, next) => {
+  try {
+    const gallery = await galleryService.getGalleryBySlug(req.params.slug);
+    const artwork = await artworkService.getArtworkById(req.params.artworkId);
+
+    if (artwork.galleryId !== gallery.id) {
+      throw new Error("Artwork does not belong to this gallery");
+    }
+
+    res.json(success(artwork));
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get("/galleries/:slug/artists", async (req, res, next) => {
   try {
     const gallery = await galleryService.getGalleryBySlug(req.params.slug);
