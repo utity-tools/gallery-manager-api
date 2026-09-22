@@ -39,8 +39,26 @@ router.get("/galleries/:slug/artworks", async (req, res, next) => {
 router.get("/galleries/:slug/artists", async (req, res, next) => {
   try {
     const gallery = await galleryService.getGalleryBySlug(req.params.slug);
-    const artists = await artistService.getArtistsByGallery(gallery.id);
-    res.json(success(artists));
+    const { page, limit } = parsePaginationParams(req.query);
+    const result = await artistService.getPublicArtistsByGallery(
+      gallery.id,
+      page,
+      limit,
+    );
+    res.json(success(result));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/galleries/:slug/artists/:artistSlug", async (req, res, next) => {
+  try {
+    const gallery = await galleryService.getGalleryBySlug(req.params.slug);
+    const artist = await artistService.getPublicArtistBySlug(
+      gallery.id,
+      req.params.artistSlug,
+    );
+    res.json(success(artist));
   } catch (err) {
     next(err);
   }

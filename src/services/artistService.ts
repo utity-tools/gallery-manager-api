@@ -24,6 +24,47 @@ export async function getArtistsByGallery(
   return artists.map((artist) => new ArtistSummaryDTO(artist));
 }
 
+export async function getPublicArtistsByGallery(
+  galleryId: string,
+  page = 1,
+  limit = 12,
+): Promise<{ artists: ArtistSummaryDTO[]; total: number; pages: number }> {
+  const skip = (page - 1) * limit;
+
+  const [artists, total] = await Promise.all([
+    prisma.artist.findMany({
+      where: { galleryId },
+      skip,
+      take: limit,
+      include: { _count: { select: { artworks: true } } },
+      orderBy: { name: "asc" },
+    }),
+    prisma.artist.count({ where: { galleryId } }),
+  ]);
+
+  return {
+    artists: artists.map((artist) => new ArtistSummaryDTO(artist)),
+    total,
+    pages: Math.ceil(total / limit),
+  };
+}
+
+export async function getPublicArtistBySlug(
+  galleryId: string,
+  artistSlug: string,
+): Promise<ArtistDTO> {
+  const artist = await prisma.artist.findUnique({
+    where: { galleryId_slug: { galleryId, slug: artistSlug } },
+    include: DETAIL_INCLUDE,
+  });
+
+  if (!artist) {
+    throw createError(ERRORS.ARTIST_NOT_FOUND);
+  }
+
+  return new ArtistDTO(artist);
+}
+
 export async function getArtistById(artistId: string): Promise<ArtistDTO> {
   const artist = await prisma.artist.findUnique({
     where: { id: artistId },
