@@ -11,6 +11,7 @@ import { CreateShowSchema } from "../schemas/show";
 import { success } from "../utils/response";
 import { parsePaginationParams } from "../utils/pagination";
 import { assertGalleryOwnership } from "../utils/ownership";
+import { z } from "zod";
 
 const router = Router();
 
@@ -141,6 +142,36 @@ router.post("/:galleryId/shows", requireAuth, async (req, res, next) => {
     const show = await showService.createShow(galleryId, data);
 
     res.status(201).json(success(show));
+  } catch (err) {
+    next(err);
+  }
+});
+
+const UpdateAboutSchema = z.object({
+  aboutHeading: z
+    .string()
+    .max(200, "aboutHeading must be 200 characters or fewer")
+    .optional(),
+  aboutText: z
+    .string()
+    .max(3000, "aboutText must be 3000 characters or fewer")
+    .optional(),
+  aboutPhotoUrl: z
+    .string()
+    .url("aboutPhotoUrl must be a valid URL")
+    .optional(),
+});
+
+router.put("/:id/about", requireAuth, async (req, res, next) => {
+  try {
+    await assertGalleryOwnership(req.params.id, req.user!.id);
+    const data = UpdateAboutSchema.parse(req.body);
+    const gallery = await galleryService.updateGallery(
+      req.user!.id,
+      req.params.id,
+      data,
+    );
+    res.json(success(gallery));
   } catch (err) {
     next(err);
   }

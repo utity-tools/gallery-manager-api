@@ -58,4 +58,18 @@ router.get("/galleries/:slug/shows", async (req, res, next) => {
   }
 });
 
+router.get("/galleries/:slug/about", async (req, res, next) => {
+  try {
+    const gallery = await galleryService.getGalleryBySlug(req.params.slug);
+    const about = {
+      aboutHeading: gallery.aboutHeading,
+      aboutText: gallery.aboutText,
+      aboutPhotoUrl: gallery.aboutPhotoUrl,
+    };
+    res.json(success(about));
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;
