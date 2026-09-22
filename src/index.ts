@@ -44,8 +44,26 @@ app.use(globalLimiter);
 app.use(corsMiddleware);
 app.use(express.json());
 
-app.get("/health", (_req, res) => {
-  res.json({ success: true, data: { status: "ok" } });
+app.get("/health", async (_req, res) => {
+  try {
+    await Promise.race([
+      prisma.$queryRaw`SELECT 1`,
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("DB check timeout")), 5000),
+      ),
+    ]);
+    res.json({
+      status: "ok",
+      db: true,
+      timestamp: new Date().toISOString(),
+    });
+  } catch {
+    res.status(503).json({
+      status: "error",
+      db: false,
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 
 app.use("/api/auth/login", authLimiter);
