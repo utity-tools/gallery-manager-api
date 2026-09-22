@@ -1,10 +1,13 @@
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
 import * as galleryService from "../services/galleryService";
 import * as artworkService from "../services/artworkService";
 import * as artistService from "../services/artistService";
 import * as showService from "../services/showService";
+import * as contactService from "../services/contactService";
 import { success } from "../utils/response";
 import { parsePaginationParams } from "../utils/pagination";
+import { CreateContactMessageSchema } from "../schemas/contact";
 
 const router = Router();
 
@@ -104,5 +107,27 @@ router.get("/galleries/:slug/about", async (req, res, next) => {
     next(err);
   }
 });
+
+const contactLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // limit each IP to 5 contact submissions per windowMs
+  skipSuccessfulRequests: false, // count all requests (including failures)
+  message: "Too many contact form submissions, please try again later.",
+});
+
+router.post(
+  "/galleries/:slug/contact",
+  contactLimiter,
+  async (req, res, next) => {
+    try {
+      const gallery = await galleryService.getGalleryBySlug(req.params.slug);
+      const data = CreateContactMessageSchema.parse(req.body);
+      const result = await contactService.sendContactMessage(gallery.id, data);
+      res.status(201).json(success(result));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 export default router;
