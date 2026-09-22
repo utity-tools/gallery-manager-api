@@ -4,10 +4,13 @@ import * as galleryService from "../services/galleryService";
 import * as artworkService from "../services/artworkService";
 import * as artistService from "../services/artistService";
 import * as showService from "../services/showService";
+import * as productService from "../services/productService";
+import * as orderService from "../services/orderService";
 import { UpdateGallerySchema } from "../schemas/gallery";
 import { CreateArtworkSchema } from "../schemas/artwork";
 import { CreateArtistSchema } from "../schemas/artist";
 import { CreateShowSchema } from "../schemas/show";
+import { CreateProductSchema, UpdateProductSchema } from "../schemas/product";
 import { success } from "../utils/response";
 import { parsePaginationParams } from "../utils/pagination";
 import { assertGalleryOwnership } from "../utils/ownership";
@@ -172,6 +175,105 @@ router.put("/:id/about", requireAuth, async (req, res, next) => {
       data,
     );
     res.json(success(gallery));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// eCommerce: Products CRUD (Private - owner only)
+router.post("/:id/products", requireAuth, async (req, res, next) => {
+  try {
+    await assertGalleryOwnership(req.params.id, req.user!.id);
+    const data = CreateProductSchema.parse(req.body);
+    const product = await productService.createProduct(req.params.id, data);
+    res.status(201).json(success(product));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/:id/products", requireAuth, async (req, res, next) => {
+  try {
+    await assertGalleryOwnership(req.params.id, req.user!.id);
+    const { page, limit } = parsePaginationParams(req.query);
+    const result = await productService.getProductsByGallery(
+      req.params.id,
+      page,
+      limit,
+    );
+    res.json(success(result));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put("/:id/products/:productId", requireAuth, async (req, res, next) => {
+  try {
+    await assertGalleryOwnership(req.params.id, req.user!.id);
+    const data = UpdateProductSchema.parse(req.body);
+    const product = await productService.updateProduct(
+      req.params.id,
+      req.params.productId,
+      data,
+    );
+    res.json(success(product));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete("/:id/products/:productId", requireAuth, async (req, res, next) => {
+  try {
+    await assertGalleryOwnership(req.params.id, req.user!.id);
+    const result = await productService.deleteProduct(
+      req.params.id,
+      req.params.productId,
+    );
+    res.json(success(result));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// eCommerce: Orders (Private - owner only)
+router.get("/:id/orders", requireAuth, async (req, res, next) => {
+  try {
+    await assertGalleryOwnership(req.params.id, req.user!.id);
+    const { page, limit } = parsePaginationParams(req.query);
+    const result = await orderService.getOrdersByGallery(
+      req.params.id,
+      page,
+      limit,
+    );
+    res.json(success(result));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/:id/orders/:orderId", requireAuth, async (req, res, next) => {
+  try {
+    await assertGalleryOwnership(req.params.id, req.user!.id);
+    const order = await orderService.getOrderById(
+      req.params.id,
+      req.params.orderId,
+    );
+    res.json(success(order));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put("/:id/orders/:orderId", requireAuth, async (req, res, next) => {
+  try {
+    await assertGalleryOwnership(req.params.id, req.user!.id);
+    const { orderStatus } = req.body;
+    const order = await orderService.updateOrderStatus(
+      req.params.id,
+      req.params.orderId,
+      orderStatus,
+    );
+    res.json(success(order));
   } catch (err) {
     next(err);
   }

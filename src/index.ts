@@ -13,6 +13,7 @@ import exhibitionRoutes from "./routes/exhibitions";
 import artFairRoutes from "./routes/artfairs";
 import showRoutes from "./routes/shows";
 import publicRoutes from "./routes/public";
+import storeRoutes from "./routes/store";
 import uploadRoutes from "./routes/upload";
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
@@ -76,6 +77,7 @@ app.use("/api/exhibitions", exhibitionRoutes);
 app.use("/api/artfairs", artFairRoutes);
 app.use("/api/shows", showRoutes);
 app.use("/api/public", publicRoutes);
+app.use("/api/public", storeRoutes);
 app.use("/api", uploadRoutes);
 
 app.use(notFoundHandler);
