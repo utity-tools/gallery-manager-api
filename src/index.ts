@@ -15,6 +15,7 @@ import showRoutes from "./routes/shows";
 import publicRoutes from "./routes/public";
 import storeRoutes from "./routes/store";
 import uploadRoutes from "./routes/upload";
+import webhookRoutes, { rawBodyMiddleware } from "./routes/webhooks";
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
 
@@ -43,6 +44,10 @@ app.use(globalLimiter);
 
 // CORS and JSON
 app.use(corsMiddleware);
+
+// Webhooks (need raw body, so before JSON parser)
+app.use("/webhooks", rawBodyMiddleware, webhookRoutes);
+
 app.use(express.json());
 
 app.get("/health", async (_req, res) => {

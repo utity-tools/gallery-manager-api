@@ -3,6 +3,7 @@ import rateLimit from "express-rate-limit";
 import * as galleryService from "../services/galleryService";
 import * as productService from "../services/productService";
 import * as orderService from "../services/orderService";
+import * as stripeService from "../services/stripeService";
 import { success } from "../utils/response";
 import { parsePaginationParams } from "../utils/pagination";
 import { CheckoutSchema } from "../schemas/product";
@@ -68,9 +69,26 @@ router.post(
       const gallery = await galleryService.getGalleryBySlug(req.params.slug);
       const data = CheckoutSchema.parse(req.body);
 
-      const result = await orderService.createOrder(gallery.id, data);
+      // Create order (stock validation + decrement)
+      const orderResult = await orderService.createOrder(gallery.id, data);
 
-      res.status(201).json(success(result));
+      // Create Stripe PaymentIntent
+      const stripeResult = await stripeService.createPaymentIntent({
+        orderId: orderResult.orderId,
+        amount: orderResult.totalPrice,
+        customerEmail: data.customerEmail,
+        customerName: data.customerName,
+        galleryId: gallery.id,
+      });
+
+      res.status(201).json(
+        success({
+          orderId: orderResult.orderId,
+          totalPrice: orderResult.totalPrice,
+          clientSecret: stripeResult.clientSecret,
+          paymentIntentId: stripeResult.paymentIntentId,
+        }),
+      );
     } catch (err) {
       next(err);
     }
