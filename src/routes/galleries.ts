@@ -1,0 +1,149 @@
+import { Router } from "express";
+import { requireAuth } from "../middleware/auth";
+import * as galleryService from "../services/galleryService";
+import * as artworkService from "../services/artworkService";
+import * as artistService from "../services/artistService";
+import * as showService from "../services/showService";
+import { UpdateGallerySchema } from "../schemas/gallery";
+import { CreateArtworkSchema } from "../schemas/artwork";
+import { CreateArtistSchema } from "../schemas/artist";
+import { CreateShowSchema } from "../schemas/show";
+import { success } from "../utils/response";
+import { parsePaginationParams } from "../utils/pagination";
+import { assertGalleryOwnership } from "../utils/ownership";
+
+const router = Router();
+
+router.get("/", requireAuth, async (req, res, next) => {
+  try {
+    const gallery = await galleryService.getUserGallery(req.user!.id);
+    res.json(success(gallery));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/:id", requireAuth, async (req, res, next) => {
+  try {
+    await assertGalleryOwnership(req.params.id, req.user!.id);
+    const gallery = await galleryService.getGalleryDetail(req.params.id);
+    res.json(success(gallery));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put("/:id", requireAuth, async (req, res, next) => {
+  try {
+    const data = UpdateGallerySchema.parse(req.body);
+    const gallery = await galleryService.updateGallery(
+      req.user!.id,
+      req.params.id,
+      data,
+    );
+    res.json(success(gallery));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/:id/settings", requireAuth, async (req, res, next) => {
+  try {
+    const gallery = await galleryService.getUserGallery(req.user!.id);
+    res.json(success(gallery));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/:galleryId/artworks", requireAuth, async (req, res, next) => {
+  try {
+    const { galleryId } = req.params;
+    await assertGalleryOwnership(galleryId, req.user!.id);
+
+    const { page, limit, sortBy, order } = parsePaginationParams(req.query);
+    const result = await artworkService.getArtworksByGallery(
+      galleryId,
+      page,
+      limit,
+      sortBy,
+      order,
+    );
+
+    res.json(success(result));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/:galleryId/artworks", requireAuth, async (req, res, next) => {
+  try {
+    const { galleryId } = req.params;
+    await assertGalleryOwnership(galleryId, req.user!.id);
+
+    const data = CreateArtworkSchema.parse(req.body);
+    const artwork = await artworkService.createArtwork(galleryId, data);
+
+    res.status(201).json(success(artwork));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/:galleryId/artists", requireAuth, async (req, res, next) => {
+  try {
+    const { galleryId } = req.params;
+    await assertGalleryOwnership(galleryId, req.user!.id);
+
+    const artists = await artistService.getArtistsByGallery(galleryId);
+
+    res.json(success(artists));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/:galleryId/artists", requireAuth, async (req, res, next) => {
+  try {
+    const { galleryId } = req.params;
+    await assertGalleryOwnership(galleryId, req.user!.id);
+
+    const data = CreateArtistSchema.parse(req.body);
+    const artist = await artistService.createArtist(galleryId, data);
+
+    res.status(201).json(success(artist));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PRIVATE — owner only.
+router.get("/:galleryId/shows", requireAuth, async (req, res, next) => {
+  try {
+    const { galleryId } = req.params;
+    await assertGalleryOwnership(galleryId, req.user!.id);
+
+    const shows = await showService.getShowsByGallery(galleryId);
+
+    res.json(success(shows));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PRIVATE — owner only.
+router.post("/:galleryId/shows", requireAuth, async (req, res, next) => {
+  try {
+    const { galleryId } = req.params;
+    await assertGalleryOwnership(galleryId, req.user!.id);
+
+    const data = CreateShowSchema.parse(req.body);
+    const show = await showService.createShow(galleryId, data);
+
+    res.status(201).json(success(show));
+  } catch (err) {
+    next(err);
+  }
+});
+
+export default router;

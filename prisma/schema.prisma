@@ -1,0 +1,224 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String?
+  name         String
+  slug         String   @unique
+  type         String   @default("individual") // 'individual' | 'gallery' | 'museum'
+  avatarUrl    String?
+  googleId     String?  @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  galleries Gallery[]
+}
+
+model Gallery {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  isPublic    Boolean  @default(true)
+  theme       String   @default("light")
+
+  // About Us page fields
+  aboutHeading  String? // H1 title (max 200 chars, enforced in Zod)
+  aboutText     String? // Body paragraphs (max 3000 chars, enforced in Zod)
+  aboutPhotoUrl String? // Hero photo
+
+  // Branding & Logo
+  logoUrl      String?
+  logoDarkUrl  String?
+
+  // Contact & Footer
+  contactEmail String? // Separate from login email
+  phone        String?
+  whatsappUrl  String?
+  googleMapsUrl String?
+
+  // Social links (columns fixed, not JSON)
+  instagramUrl String?
+  facebookUrl  String?
+  xUrl         String? // Twitter/X
+  linkedinUrl  String?
+
+  // Address
+  addressLine String?
+  city        String?
+  postalCode  String?
+  country     String?
+
+  // Hours & Timezone
+  hours    Json? // Shape: { "monday": [{ "start": "10:00", "close": "14:00" }, ...], "sunday": null }
+  hoursNote String?
+  timezone String? // IANA timezone (e.g., "Europe/Madrid")
+
+  // SEO & Meta
+  metaTitle       String?
+  metaDescription String?
+  ogImageUrl      String?
+
+  // Legal & Compliance
+  legalName     String?
+  taxId         String?
+  privacyPolicyUrl String?
+
+  // Announcements (banner at top of site)
+  announcementText    String?
+  announcementUrl     String?
+  announcementEnabled Boolean @default(false)
+
+  // Hero carousel (home page slider)
+  heroArtworkIds String[] @default([]) // Array of artwork IDs for hero, max 4, order preserved
+
+  // Future fields (nullable, ready when needed)
+  newsletterUrl String?
+  showPrices    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  artworks Artwork[]
+  artists  Artist[]
+  shows    Show[]
+
+  @@unique([userId])
+}
+
+model Artist {
+  id        String  @id @default(cuid())
+  galleryId String
+  gallery   Gallery @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+
+  name      String
+  slug      String
+  country   String?
+  birthYear Int?
+  bio       String?
+  photoUrl  String? // Small photo (artist card)
+  cv        String?
+
+  // Biography page fields
+  biographyPhotoUrl String? // Large photo (biography section)
+  biographyHeading  String? // H1 title (max 200 chars, enforced in Zod)
+  biographyText     String? // Body paragraphs (max 3000 chars, enforced in Zod)
+
+  artworks         Artwork[]    @relation("ArtistWorks")
+  featuredArtworks Artwork[]    @relation("FeaturedArtworks")
+  exhibitions      Exhibition[]
+  artFairs         ArtFair[]
+  shows            Show[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([galleryId, slug])
+}
+
+model Exhibition {
+  id       String @id @default(cuid())
+  artistId String
+  artist   Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+
+  title       String
+  venue       String?
+  country     String?
+  year        Int?
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ArtFair {
+  id       String @id @default(cuid())
+  artistId String
+  artist   Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+
+  name    String
+  country String?
+  year    Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Artwork {
+  id          String   @id @default(cuid())
+  galleryId   String
+  gallery     Gallery  @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+  artistId    String
+  artist      Artist   @relation("ArtistWorks", fields: [artistId], references: [id], onDelete: Cascade)
+
+  // Curation only: which artist's biography page features this artwork.
+  // Kept as Decimal (not Float) — this is money, and the project already
+  // has real price data; switching to a float type would be a real
+  // precision regression, not something to introduce here.
+  featuredByArtistId String?
+  featuredByArtist   Artist? @relation("FeaturedArtworks", fields: [featuredByArtistId], references: [id], onDelete: SetNull)
+
+  title       String
+  description String?
+  imageUrl    String
+  price       Decimal?
+  year        Int?
+  position    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  showAppearances ShowArtwork[]
+}
+
+// Gallery-level curated exhibition (distinct from the artist-CV-style
+// Exhibition model above): multi-artist, multi-artwork, real date range,
+// its own venue/address. GET /api/shows/:id is PUBLIC (no auth) — see
+// src/routes/shows.ts for the full public/private route breakdown.
+model Show {
+  id        String  @id @default(cuid())
+  galleryId String
+  gallery   Gallery @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+
+  title         String
+  slug          String
+  description   String?
+  startDate     DateTime?
+  endDate       DateTime?
+  venueName     String?
+  address       String?
+  city          String?
+  country       String?
+  coverImageUrl String?
+  isPublic      Boolean  @default(true)
+
+  artists  Artist[]
+  artworks ShowArtwork[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([galleryId, slug])
+}
+
+// Explicit join (rather than an implicit m2m) so artworks can be ordered
+// within a show independently of their general portfolio position.
+model ShowArtwork {
+  id        String  @id @default(cuid())
+  showId    String
+  show      Show    @relation(fields: [showId], references: [id], onDelete: Cascade)
+  artworkId String
+  artwork   Artwork @relation(fields: [artworkId], references: [id], onDelete: Cascade)
+  position  Int     @default(0)
+
+  @@unique([showId, artworkId])
+}
