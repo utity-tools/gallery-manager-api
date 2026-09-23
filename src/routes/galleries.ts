@@ -99,9 +99,10 @@ router.get("/:galleryId/artists", requireAuth, async (req, res, next) => {
     const { galleryId } = req.params;
     await assertGalleryOwnership(galleryId, req.user!.id);
 
-    const artists = await artistService.getArtistsByGallery(galleryId);
+    const { page, limit } = parsePaginationParams(req.query);
+    const result = await artistService.getPublicArtistsByGallery(galleryId, page, limit);
 
-    res.json(success(artists));
+    res.json(success(result));
   } catch (err) {
     next(err);
   }
