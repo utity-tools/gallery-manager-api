@@ -30,7 +30,7 @@ export interface LoginResponse {
 }
 
 export interface PaginatedResponse<T> {
-  artworks: T[];
+  items: T[];
   total: number;
   page: number;
   pages: number;

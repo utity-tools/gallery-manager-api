@@ -47,7 +47,7 @@ export async function getProductsByGallery(
   ]);
 
   return {
-    products: products.map((product) => new ProductDTO(product)),
+    items: products.map((product) => new ProductDTO(product)),
     total,
     page,
     pages: Math.ceil(total / limit),

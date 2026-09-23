@@ -87,7 +87,7 @@ export async function getArtworksByGallery(
   const pages = Math.ceil(total / limit);
 
   return {
-    artworks: artworks.map((artwork) => new ArtworkDTO(artwork)),
+    items: artworks.map((artwork) => new ArtworkDTO(artwork)),
     total,
     page,
     pages,
