@@ -127,9 +127,10 @@ router.get("/:galleryId/shows", requireAuth, async (req, res, next) => {
     const { galleryId } = req.params;
     await assertGalleryOwnership(galleryId, req.user!.id);
 
-    const shows = await showService.getShowsByGallery(galleryId);
+    const { page, limit } = parsePaginationParams(req.query);
+    const result = await showService.getShowsByGallery(galleryId, page, limit);
 
-    res.json(success(shows));
+    res.json(success(result));
   } catch (err) {
     next(err);
   }

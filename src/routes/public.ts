@@ -85,10 +85,11 @@ router.get("/galleries/:slug/artists/:artistSlug", async (req, res, next) => {
 router.get("/galleries/:slug/shows", async (req, res, next) => {
   try {
     const gallery = await galleryService.getGalleryBySlug(req.params.slug);
-    const shows = await showService.getShowsByGallery(gallery.id, {
+    const { page, limit } = parsePaginationParams(req.query);
+    const result = await showService.getShowsByGallery(gallery.id, page, limit, {
       publicOnly: true,
     });
-    res.json(success(shows));
+    res.json(success(result));
   } catch (err) {
     next(err);
   }

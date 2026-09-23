@@ -4,6 +4,7 @@ import { ShowDTO, ShowSummaryDTO } from "../dtos/ShowDTO";
 import { CreateShowInput, UpdateShowInput } from "../schemas/show";
 import { generateUniqueSlug } from "../utils/slug";
 import { assertShowOwnership } from "../utils/ownership";
+import { PaginatedResponse } from "../types";
 
 const ARTIST_SELECT = { select: { id: true, name: true, slug: true } };
 
@@ -78,18 +79,34 @@ async function loadShowDetail(showId: string): Promise<ShowDTO> {
 
 export async function getShowsByGallery(
   galleryId: string,
+  page = 1,
+  limit = 12,
   options: { publicOnly?: boolean } = {},
-): Promise<ShowSummaryDTO[]> {
-  const shows = await prisma.show.findMany({
-    where: { galleryId, ...(options.publicOnly ? { isPublic: true } : {}) },
-    include: {
-      artists: { select: { name: true } },
-      _count: { select: { artworks: true } },
-    },
-    orderBy: { startDate: "desc" },
-  });
+): Promise<PaginatedResponse<ShowSummaryDTO>> {
+  const skip = (page - 1) * limit;
 
-  return shows.map((show) => new ShowSummaryDTO(show));
+  const [shows, total] = await Promise.all([
+    prisma.show.findMany({
+      where: { galleryId, ...(options.publicOnly ? { isPublic: true } : {}) },
+      skip,
+      take: limit,
+      include: {
+        artists: { select: { name: true } },
+        _count: { select: { artworks: true } },
+      },
+      orderBy: { startDate: "desc" },
+    }),
+    prisma.show.count({
+      where: { galleryId, ...(options.publicOnly ? { isPublic: true } : {}) },
+    }),
+  ]);
+
+  return {
+    items: shows.map((show) => new ShowSummaryDTO(show)),
+    total,
+    page,
+    pages: Math.ceil(total / limit),
+  };
 }
 
 // Internal — no isPublic gate. Safe for use right after create/update
