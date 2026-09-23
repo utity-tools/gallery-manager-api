@@ -29,10 +29,10 @@ router.get("/galleries/:slug/store", async (req, res, next) => {
 
     // Filter by category if provided
     if (category) {
-      const filtered = result.artworks.filter((p) => p.category === category);
+      const filtered = result.items.filter((p) => p.category === category);
       result = {
         ...result,
-        artworks: filtered,
+        items: filtered,
         total: filtered.length,
         pages: Math.ceil(filtered.length / limit),
       };
