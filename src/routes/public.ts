@@ -9,6 +9,7 @@ import * as contactService from "../services/contactService";
 import { success } from "../utils/response";
 import { parsePaginationParams } from "../utils/pagination";
 import { CreateContactMessageSchema } from "../schemas/contact";
+import { createError, ERRORS } from "../errors/AppErrors";
 
 const router = Router();
 
@@ -102,6 +103,23 @@ router.get("/galleries/:slug/store", async (req, res, next) => {
     const { page, limit } = parsePaginationParams(req.query);
     const result = await productService.getProductsByGallery(gallery.id, page, limit);
     res.json(success(result));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/galleries/:slug/store/:productId", async (req, res, next) => {
+  try {
+    const gallery = await galleryService.getGalleryBySlug(req.params.slug);
+    const product = await productService.getProductById(req.params.productId);
+
+    if (product.galleryId !== gallery.id) {
+      throw createError(ERRORS.FORBIDDEN, {
+        message: "Product does not belong to this gallery",
+      });
+    }
+
+    res.json(success(product));
   } catch (err) {
     next(err);
   }
