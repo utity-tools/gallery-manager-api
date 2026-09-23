@@ -4,6 +4,7 @@ import * as galleryService from "../services/galleryService";
 import * as artworkService from "../services/artworkService";
 import * as artistService from "../services/artistService";
 import * as showService from "../services/showService";
+import * as productService from "../services/productService";
 import * as contactService from "../services/contactService";
 import { success } from "../utils/response";
 import { parsePaginationParams } from "../utils/pagination";
@@ -89,6 +90,17 @@ router.get("/galleries/:slug/shows", async (req, res, next) => {
     const result = await showService.getShowsByGallery(gallery.id, page, limit, {
       publicOnly: true,
     });
+    res.json(success(result));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/galleries/:slug/store", async (req, res, next) => {
+  try {
+    const gallery = await galleryService.getGalleryBySlug(req.params.slug);
+    const { page, limit } = parsePaginationParams(req.query);
+    const result = await productService.getProductsByGallery(gallery.id, page, limit);
     res.json(success(result));
   } catch (err) {
     next(err);
