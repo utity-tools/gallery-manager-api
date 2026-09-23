@@ -4,6 +4,7 @@ import { ArtistDTO, ArtistSummaryDTO } from "../dtos/ArtistDTO";
 import { CreateArtistInput, UpdateArtistInput } from "../schemas/artist";
 import { generateUniqueSlug } from "../utils/slug";
 import { assertArtistOwnership } from "../utils/ownership";
+import { PaginatedResponse } from "../types";
 
 const DETAIL_INCLUDE = {
   exhibitions: { orderBy: { year: "desc" as const } },
@@ -28,7 +29,7 @@ export async function getPublicArtistsByGallery(
   galleryId: string,
   page = 1,
   limit = 12,
-): Promise<{ artists: ArtistSummaryDTO[]; total: number; pages: number }> {
+): Promise<PaginatedResponse<ArtistSummaryDTO>> {
   const skip = (page - 1) * limit;
 
   const [artists, total] = await Promise.all([
@@ -43,8 +44,9 @@ export async function getPublicArtistsByGallery(
   ]);
 
   return {
-    artists: artists.map((artist) => new ArtistSummaryDTO(artist)),
+    items: artists.map((artist) => new ArtistSummaryDTO(artist)),
     total,
+    page,
     pages: Math.ceil(total / limit),
   };
 }

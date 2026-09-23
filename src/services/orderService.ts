@@ -3,6 +3,7 @@ import { createError, ERRORS } from "../errors/AppErrors";
 import { OrderDTO } from "../dtos/OrderDTO";
 import { CheckoutInput } from "../schemas/product";
 import { checkStockAvailable } from "./productService";
+import { PaginatedResponse } from "../types";
 
 export async function createOrder(
   galleryId: string,
@@ -98,7 +99,7 @@ export async function getOrdersByGallery(
   galleryId: string,
   page = 1,
   limit = 12,
-): Promise<{ orders: OrderDTO[]; total: number; pages: number }> {
+): Promise<PaginatedResponse<OrderDTO>> {
   const skip = (page - 1) * limit;
 
   const [orders, total] = await Promise.all([
@@ -113,8 +114,9 @@ export async function getOrdersByGallery(
   ]);
 
   return {
-    orders: orders.map((order) => new OrderDTO(order)),
+    items: orders.map((order) => new OrderDTO(order)),
     total,
+    page,
     pages: Math.ceil(total / limit),
   };
 }
